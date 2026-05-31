@@ -21,6 +21,26 @@ TOOLS_DIR = Path.home() / "tools"
 CLAW_CORE = "100.126.22.55"
 OLLAMA_URL = f"http://{CLAW_CORE}:11434/api/generate"
 OLLAMA_MODEL = "hermes3:70b"
+HERMES_LOG = CTF_BASE / "HERMES_LOG.md"
+
+
+def read_shared_context() -> str:
+    """Read HERMES_LOG.md to give Hermes project context."""
+    if HERMES_LOG.exists():
+        return HERMES_LOG.read_text()
+    return ""
+
+
+def append_hermes_log(entry: str) -> None:
+    """Append a timestamped entry to HERMES_LOG.md under Hermes Work Log."""
+    if not HERMES_LOG.exists():
+        return
+    content = HERMES_LOG.read_text()
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    log_entry = f"\n### {timestamp} — {entry}\n"
+    insert_after = "## Hermes Work Log\n<!-- Hermes appends entries here after every generation task -->"
+    content = content.replace(insert_after, insert_after + log_entry)
+    HERMES_LOG.write_text(content)
 
 
 def read_notes(machine_name: str, platform: str) -> str:
@@ -72,7 +92,14 @@ def call_ollama(prompt: str) -> str:
 
 def generate_writeup(notes: str, machine_name: str, platform: str) -> str:
     """Generate a full technical writeup from notes."""
-    prompt = f"""You are writing a cybersecurity CTF writeup for {machine_name} on {platform.upper()}.
+    shared_context = read_shared_context()
+    prompt = f"""You are Hermes, the AI assistant for GP Singh's cybersecurity lab.
+
+SHARED PROJECT CONTEXT:
+{shared_context}
+
+---
+You are writing a cybersecurity CTF writeup for {machine_name} on {platform.upper()}.
 
 Author: GP Singh (cybersecurity analyst building toward OSCP)
 GitHub: PyHackSecGP
@@ -120,7 +147,11 @@ Be technically precise. Explain the reasoning at each step.
 
 def generate_linkedin_post(notes: str, machine_name: str, platform: str) -> str:
     """Generate a short LinkedIn post for the win."""
-    prompt = f"""Write a LinkedIn post for GP Singh who just rooted {machine_name} on {platform.upper()}.
+    shared_context = read_shared_context()
+    prompt = f"""You are Hermes, GP Singh's lab AI. Project context:
+{shared_context[:500]}
+
+Write a LinkedIn post for GP Singh who just rooted {machine_name} on {platform.upper()}.
 
 Raw notes:
 {notes[:1000]}
@@ -202,6 +233,12 @@ def main() -> None:
     writeup_path.write_text(writeup)
     linkedin_path.write_text(linkedin)
     medium_path.write_text(f"MEDIUM INTRO:\n\n{medium_intro}\n\n---\nFULL WRITEUP BELOW:\n\n{writeup}")
+
+    # Log Hermes work to shared context file
+    append_hermes_log(
+        f"Generated writeup + LinkedIn + Medium intro for {platform.upper()}/{machine}\n"
+        f"  Files: {writeup_path.name}, {linkedin_path.name}, {medium_path.name}"
+    )
 
     print(f"\n[+] DONE")
     print(f"  Writeup:   {writeup_path}")
