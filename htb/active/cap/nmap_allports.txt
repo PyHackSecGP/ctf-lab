@@ -1,0 +1,10 @@
+# Nmap 7.99 scan initiated Sun May 31 15:42:30 2026 as: /usr/lib/nmap/nmap --privileged -p- --min-rate 5000 -T4 -oN /home/tony/ctf/htb/active/cap/nmap_allports.txt 10.129.12.255
+Nmap scan report for 10.129.12.255
+Host is up (0.073s latency).
+Not shown: 65532 closed tcp ports (reset)
+PORT   STATE SERVICE
+21/tcp open  ftp
+22/tcp open  ssh
+80/tcp open  http
+
+# Nmap done at Sun May 31 15:42:44 2026 -- 1 IP address (1 host up) scanned in 14.28 seconds
