@@ -19,27 +19,8 @@ import urllib.error
 CTF_BASE = Path.home() / "ctf"
 TOOLS_DIR = Path.home() / "tools"
 CLAW_CORE = "100.126.22.55"
-ANTHROPIC_KEY_CMD = f"ssh clawcore 'grep ANTHROPIC_API_KEY /home/clawadmin/secrets/.env | cut -d= -f2'"
-
-
-def get_api_key() -> str:
-    """Fetch Anthropic API key from claw-core secrets."""
-    try:
-        result = subprocess.run(
-            ["ssh", "-i", str(Path.home() / ".ssh/kali_ed25519"),
-             "-o", "StrictHostKeyChecking=no",
-             f"clawadmin@{CLAW_CORE}",
-             "grep ANTHROPIC_API_KEY /home/clawadmin/secrets/.env | cut -d= -f2"],
-            capture_output=True, text=True, timeout=10
-        )
-        key = result.stdout.strip()
-        if not key:
-            raise ValueError("Empty key returned")
-        return key
-    except Exception as e:
-        print(f"[ERROR] Could not fetch API key from claw-core: {e}")
-        print("  Make sure claw-core is reachable via Tailscale")
-        sys.exit(1)
+OLLAMA_URL = f"http://{CLAW_CORE}:11434/api/generate"
+OLLAMA_MODEL = "hermes3:70b"
 
 
 def read_notes(machine_name: str, platform: str) -> str:
@@ -64,36 +45,32 @@ def read_notes(machine_name: str, platform: str) -> str:
     return notes_path.read_text(), machine_dir
 
 
-def call_claude(prompt: str, api_key: str) -> str:
-    """Call Claude API directly via urllib."""
+def call_ollama(prompt: str) -> str:
+    """Call Ollama on claw-core via urllib."""
     payload = json.dumps({
-        "model": "claude-opus-4-5",
-        "max_tokens": 4096,
-        "messages": [{"role": "user", "content": prompt}]
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False,
     }).encode("utf-8")
 
     req = urllib.request.Request(
-        "https://api.anthropic.com/v1/messages",
+        OLLAMA_URL,
         data=payload,
-        headers={
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
+        headers={"content-type": "application/json"},
         method="POST"
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        with urllib.request.urlopen(req, timeout=300) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-            return data["content"][0]["text"]
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8")
-        print(f"[ERROR] API call failed: {e.code} {body}")
+            return data["response"]
+    except urllib.error.URLError as e:
+        print(f"[ERROR] Ollama call failed: {e}")
+        print(f"  Is claw-core ({CLAW_CORE}) reachable via Tailscale?")
         sys.exit(1)
 
 
-def generate_writeup(notes: str, machine_name: str, platform: str, api_key: str) -> str:
+def generate_writeup(notes: str, machine_name: str, platform: str) -> str:
     """Generate a full technical writeup from notes."""
     prompt = f"""You are writing a cybersecurity CTF writeup for {machine_name} on {platform.upper()}.
 
@@ -138,10 +115,10 @@ List all tools with one-line descriptions.
 Write it so a junior analyst can follow along and LEARN, not just repeat steps.
 Be technically precise. Explain the reasoning at each step.
 """
-    return call_claude(prompt, api_key)
+    return call_ollama(prompt)
 
 
-def generate_linkedin_post(notes: str, machine_name: str, platform: str, api_key: str) -> str:
+def generate_linkedin_post(notes: str, machine_name: str, platform: str) -> str:
     """Generate a short LinkedIn post for the win."""
     prompt = f"""Write a LinkedIn post for GP Singh who just rooted {machine_name} on {platform.upper()}.
 
@@ -160,10 +137,10 @@ Guidelines:
 
 Just write the post text, nothing else.
 """
-    return call_claude(prompt, api_key)
+    return call_ollama(prompt)
 
 
-def generate_medium_intro(writeup: str, machine_name: str, api_key: str) -> str:
+def generate_medium_intro(writeup: str, machine_name: str) -> str:
     """Generate Medium-ready intro paragraph."""
     prompt = f"""Write a 2-paragraph Medium article introduction for this CTF writeup about {machine_name}.
 
@@ -173,7 +150,7 @@ Writeup content:
 Make it engaging for a security audience. First paragraph: hook with what makes this machine interesting.
 Second paragraph: what the reader will learn. No fluff. Under 100 words total.
 """
-    return call_claude(prompt, api_key)
+    return call_ollama(prompt)
 
 
 def move_to_completed(machine_dir: Path, platform: str, machine_name: str) -> Path:
@@ -199,20 +176,19 @@ def main() -> None:
     platform = args.platform
 
     print(f"[*] Generating writeup for {machine} ({platform.upper()})")
-    print("[*] Fetching API key from claw-core...")
-    api_key = get_api_key()
+    print(f"[*] Using Ollama on claw-core ({CLAW_CORE}) — model: {OLLAMA_MODEL}")
 
     print("[*] Reading notes...")
     notes, machine_dir = read_notes(machine, platform)
 
-    print("[*] Generating writeup (this takes ~30 seconds)...")
-    writeup = generate_writeup(notes, machine, platform, api_key)
+    print("[*] Generating writeup (this takes ~60s on hermes3:70b)...")
+    writeup = generate_writeup(notes, machine, platform)
 
     print("[*] Generating LinkedIn post...")
-    linkedin = generate_linkedin_post(notes, machine, platform, api_key)
+    linkedin = generate_linkedin_post(notes, machine, platform)
 
     print("[*] Generating Medium intro...")
-    medium_intro = generate_medium_intro(writeup, machine, api_key)
+    medium_intro = generate_medium_intro(writeup, machine)
 
     # Save everything
     timestamp = datetime.now().strftime("%Y-%m-%d")
