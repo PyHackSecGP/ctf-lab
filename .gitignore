@@ -2,3 +2,4 @@ venv/
 *.ovpn
 .env
 *.pcap
+CLAUDE.md
