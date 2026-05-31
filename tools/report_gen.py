@@ -18,8 +18,8 @@ import urllib.error
 
 CTF_BASE = Path.home() / "ctf"
 TOOLS_DIR = Path.home() / "tools"
-CLAW_CORE = "100.126.22.55"
-OLLAMA_URL = f"http://{CLAW_CORE}:11434/api/generate"
+HERMES_HOST = "100.126.22.55"  # Hermes LLM server
+OLLAMA_URL = f"http://{HERMES_HOST}:11434/api/generate"
 OLLAMA_MODEL = "hermes3:70b"
 HERMES_LOG = CTF_BASE / "HERMES_LOG.md"
 
@@ -86,7 +86,7 @@ def call_ollama(prompt: str) -> str:
             return data["response"]
     except urllib.error.URLError as e:
         print(f"[ERROR] Ollama call failed: {e}")
-        print(f"  Is claw-core ({CLAW_CORE}) reachable via Tailscale?")
+        print(f"  Is claw-core ({HERMES_HOST}) reachable via Tailscale?")
         sys.exit(1)
 
 
@@ -207,7 +207,7 @@ def main() -> None:
     platform = args.platform
 
     print(f"[*] Generating writeup for {machine} ({platform.upper()})")
-    print(f"[*] Using Ollama on claw-core ({CLAW_CORE}) — model: {OLLAMA_MODEL}")
+    print(f"[*] Using Ollama on claw-core ({HERMES_HOST}) — model: {OLLAMA_MODEL}")
 
     print("[*] Reading notes...")
     notes, machine_dir = read_notes(machine, platform)

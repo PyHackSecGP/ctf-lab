@@ -68,12 +68,15 @@ def run_report_gen(machine: str, platform: str, no_push: bool) -> None:
         sys.exit(1)
 
 
-def check_claw_core_reachable() -> bool:
-    """Quick ping check on Ollama port."""
+HERMES_HOST = "100.126.22.55"  # Hermes LLM server
+
+
+def check_hermes_reachable() -> bool:
+    """Quick ping check on Hermes Ollama port."""
     try:
         result = subprocess.run(
             ["curl", "-s", "--connect-timeout", "3",
-             "http://100.126.22.55:11434/api/tags"],
+             f"http://{HERMES_HOST}:11434/api/tags"],
             capture_output=True, timeout=5
         )
         return result.returncode == 0
@@ -135,10 +138,10 @@ def main() -> None:
     update_flags(notes_path, args.user_flag, args.root_flag)
 
     # Check claw-core reachable before starting long LLM call
-    print("[*] Checking claw-core reachability...")
-    if not check_claw_core_reachable():
-        print("[!] claw-core not reachable at 100.126.22.55:11434")
-        print("    Is Tailscale connected? Is Ollama running on claw-core?")
+    print("[*] Checking Hermes reachability...")
+    if not check_hermes_reachable():
+        print(f"[!] Hermes not reachable at {HERMES_HOST}:11434")
+        print("    Is Tailscale connected? Is Ollama running on Hermes?")
         print("    Skipping writeup generation — run report_gen.py manually later:")
         print(f"    python3 {TOOLS_DIR}/report_gen.py --machine {machine} --platform {platform} --complete")
 

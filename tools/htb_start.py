@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 CTF_BASE = Path.home() / "ctf"
-MY_IP = "10.10.14.135"  # tun0 — update if it changes
+MY_IP = "10.10.14.135"  # tun0 on Mjolnir — update if it changes
 
 
 NOTES_TEMPLATE = """# {platform_upper} {machine_title} — Notes

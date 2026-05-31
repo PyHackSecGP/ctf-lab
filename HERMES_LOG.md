@@ -12,8 +12,8 @@
 - **HTB target:** 1 machine per day
 
 ## Lab Architecture
-- **Kali (100.71.84.2):** hacking, Claude Code, all CTF work
-- **claw-core (100.126.22.55):** Ollama LLM inference (hermes3:70b, qwen3.5, llama3.2:3b)
+- **Mjolnir (100.71.84.2):** Kali hacking machine — Claude Code, all CTF work
+- **Hermes (100.126.22.55):** LLM inference server — Ollama (hermes3:70b, qwen3.5, llama3.2:3b)
 - **Network:** Tailscale private mesh
 
 ## CTF Directory Layout (kali)
